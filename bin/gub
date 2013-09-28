@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'gub/cli'
+
+# Start our command line interface
+Gub::CLI.start
