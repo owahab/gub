@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.version       = Gub::VERSION
   spec.authors       = ["Omar Abdel-Wahab"]
   spec.email         = ["owahab@gmail.com"]
-  spec.description   = %q{The missing command line tool for Github}
+  spec.description   = %q{Warning: Heavily Under Development, Still in early alpha}
   spec.summary       = %q{The missing command line tool for Github}
   spec.homepage      = ""
   spec.license       = "MIT"
