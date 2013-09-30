@@ -89,7 +89,7 @@ module Gub
         puts 'Pushing branch...'
         `git push -q origin issue-#{id}`
         puts "Creating pull-request for issue ##{id}..."
-        @client.create_pull_request_for_issue(repo, 'master', "#{user_name}/issue-#{id}", id)
+        @client.create_pull_request_for_issue(repo, 'master', "#{user_name}:issue-#{id}", id)
         @client.close_issue(repo, id)
       end
     end
