@@ -123,8 +123,15 @@ module Gub
     
     private
       def setup
-        config = YAML.load_file("~/.gubrc")
-        @client = Octokit::Client.new access_token: config.token
+        # TODO: Check if the RC file exists
+        rc = File.expand_path("~/.gubrc")
+        if File.exists?(rc)
+          config = YAML.load_file(rc)
+          @client = Octokit::Client.new access_token: config.token
+        else
+          puts 'Unable to find .gubrc file.'
+          exit 1
+        end
       end
     
       def table rows, header = []
