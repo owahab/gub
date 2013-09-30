@@ -87,7 +87,6 @@ module Gub
     def finish id = nil
       setup
       id ||= `git rev-parse --abbrev-ref HEAD`.split('-').last
-      debugger
       if id.nil?
         puts "Unable to guess issue ID from branch name. You might want to specify it explicitly."
       else
