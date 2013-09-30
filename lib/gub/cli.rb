@@ -7,6 +7,11 @@ module Gub
   class CLI < Thor
     default_task :info
     
+    desc 'publish', 'Publish a local repo to Github'
+    def publish
+      setup
+    end
+  
     desc 'repos', 'List Github repositories'
     def repos
       setup
@@ -34,7 +39,6 @@ module Gub
         issues = @client.issues
       else
         params = {}
-        # params[:user] = user_name
         if parent
           params[:repo] = parent
         else
@@ -54,6 +58,7 @@ module Gub
           rows << row
         end
         puts table rows, ['ID', 'Title', 'Author', 'Assignee']
+        puts "Found #{issues.count} issue(s)."
         puts 'Hint: use "gub start" to start working on an issue.'
       end
     # rescue Octokit::ClientError
@@ -65,6 +70,14 @@ module Gub
       if id.nil?
         puts 'Issue ID required.'
       else
+        if parent
+          repo = parent
+        else
+          repo = repo_full_name
+        end
+        # Fetch issue to validate it exists
+        issue = @client.issue(repo, id)
+        @client.issues.update_issue repo, issue.number, issue.title, issue.description, { assignee: @client.user.login }
         `git checkout master`
         `git checkout -b issue-#{id}`
       end
@@ -79,7 +92,7 @@ module Gub
         puts "Unable to guess issue ID from branch name. You might want to specify it explicitly."
       else
         puts 'Pushing branch...'
-        # `git push -q origin issue-#{id}`
+        `git push -q origin issue-#{id}`
         puts "Creating pull-request for issue ##{id}..."
         # @client.pull_requests.create
       end
