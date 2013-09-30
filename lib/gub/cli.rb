@@ -73,7 +73,7 @@ module Gub
         # Fetch issue to validate it exists
         issue = @client.issue(repo, id)
         @client.update_issue repo, issue.number, issue.title, issue.description, { assignee: @client.user.login }
-        `git checkout master`
+        sync
         `git checkout -b issue-#{id}`
       end
     end
@@ -97,6 +97,14 @@ module Gub
     desc 'clone', 'Clone a Github repository'
     def clone repo
       `git clone git@github.com:#{repo}`
+    end
+    
+    desc 'sync', 'Synchronize fork with upstream repository'
+    def sync
+      puts 'Synchroizing with upstream...'
+      `git checkout master`
+      `git fetch -q upstream`
+      `git merge -q upstream/master`
     end
     
     desc 'info', 'Show current respository information'
