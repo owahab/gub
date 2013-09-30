@@ -81,7 +81,7 @@ module Gub
     desc 'finish', 'Finish working on a Github issue'
     def finish id = nil
       setup
-      id ||= `git rev-parse --abbrev-ref HEAD`.split('-').last
+      id ||= `git rev-parse --abbrev-ref HEAD`.split('-').last.to_s.chop
       if id.nil?
         puts "Unable to guess issue ID from branch name. You might want to specify it explicitly."
       else
