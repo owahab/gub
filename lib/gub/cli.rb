@@ -126,8 +126,8 @@ module Gub
         # TODO: Check if the RC file exists
         rc = File.expand_path("~/.gubrc")
         if File.exists?(rc)
-          config = YAML.load_file(rc).symbolize_keys!
-          @client = Octokit::Client.new access_token: config[:token]
+          config = YAML.load_file(rc)
+          @client = Octokit::Client.new access_token: config['token']
         else
           puts 'Unable to find .gubrc file.'
           exit 1
