@@ -77,7 +77,7 @@ module Gub
         end
         # Fetch issue to validate it exists
         issue = @client.issue(repo, id)
-        @client.issues.update_issue repo, issue.number, issue.title, issue.description, { assignee: @client.user.login }
+        @client.update_issue repo, issue.number, issue.title, issue.description, { assignee: @client.user.login }
         `git checkout master`
         `git checkout -b issue-#{id}`
       end
