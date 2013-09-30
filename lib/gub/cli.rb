@@ -122,9 +122,8 @@ module Gub
     
     private
       def setup
-        # @client = Github.new oauth_token: 'f5209518af25ddb74261b2dd3b912c60abcadefe'
-        # @user = Github::Users.new oauth_token: 'f5209518af25ddb74261b2dd3b912c60abcadefe'
-        @client = Octokit::Client.new access_token: 'f5209518af25ddb74261b2dd3b912c60abcadefe'
+        config = YAML.load_file("~/.gubrc")
+        @client = Octokit::Client.new access_token: config.token
       end
     
       def table rows, header = []
