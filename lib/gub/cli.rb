@@ -70,11 +70,6 @@ module Gub
       if id.nil?
         puts 'Issue ID required.'
       else
-        if parent
-          repo = parent
-        else
-          repo = repo_full_name
-        end
         # Fetch issue to validate it exists
         issue = @client.issue(repo, id)
         @client.update_issue repo, issue.number, issue.title, issue.description, { assignee: @client.user.login }
@@ -90,10 +85,12 @@ module Gub
       if id.nil?
         puts "Unable to guess issue ID from branch name. You might want to specify it explicitly."
       else
+        issue = @client.issue(repo, id)
         puts 'Pushing branch...'
         `git push -q origin issue-#{id}`
         puts "Creating pull-request for issue ##{id}..."
-        @client.create_pull_request_for_issue(repo_full_name, 'master', "issue-#{id}", id)
+        @client.create_pull_request_for_issue(repo, 'master', "issue-#{id}", id)
+        @client.close_issue(repo, id)
       end
     end
     
@@ -129,6 +126,14 @@ module Gub
       def run command, params = {}
       end
     
+      def repo
+        if parent
+          name = parent
+        else
+          name = repo_full_name
+        end
+        name
+      end
       def repo_full_name
         `git remote -v | grep origin | grep fetch | awk '{print $2}' | cut -d ':' -f 2`.to_s.chop
       end
