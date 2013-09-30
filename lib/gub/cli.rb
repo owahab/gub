@@ -1,4 +1,5 @@
 require 'gub/version'
+require 'yaml'
 require 'thor'
 require 'octokit'
 require 'terminal-table'
