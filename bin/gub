@@ -1,7 +1,9 @@
 #!/usr/bin/env ruby
 
+$:<< File.expand_path("~/Projects/gub/lib/")
+
 require 'rubygems'
-require 'gub/cli'
+require 'gub'
 
 # Start our command line interface
-Gub::CLI.start
+Gub.start

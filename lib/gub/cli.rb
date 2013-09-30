@@ -1,7 +1,5 @@
 require 'gub/version'
-require 'yaml'
 require 'thor'
-require 'octokit'
 require 'terminal-table'
 
 module Gub
@@ -18,12 +16,12 @@ module Gub
       setup
       rows = []
       id = 0
-      @client.repos.list.each do |repo|
+      Gub.github.repos.list.each do |repo|
         id = id.next
         rows << [id, repo.full_name]
       end
-      @client.orgs.list.each do |org|
-        @client.repos.list(org: org.login).each do |repo|
+      Gub.github.orgs.list.each do |org|
+        Gub.github.repos.list(org: org.login).each do |repo|
           id = id.next
           rows << [id, repo.full_name]
         end
@@ -37,7 +35,7 @@ module Gub
       setup
       if options.all || repo_full_name.nil?
         puts "Listing all issues:"
-        issues = @client.issues
+        issues = Gub.github.issues
       else
         params = {}
         if parent
@@ -46,7 +44,7 @@ module Gub
           params[:repo] = repo_full_name
         end
         puts "Listing issues for #{params[:repo]}:"
-        issues = @client.issues params
+        issues = Gub.github.issues params
       end
       unless issues.nil?
         rows = []
@@ -72,8 +70,8 @@ module Gub
         puts 'Issue ID required.'
       else
         # Fetch issue to validate it exists
-        issue = @client.issue(repo, id)
-        @client.update_issue repo, issue.number, issue.title, issue.description, { assignee: @client.user.login }
+        issue = Gub.github.issue(repo, id)
+        Gub.github.update_issue repo, issue.number, issue.title, issue.description, { assignee: Gub.github.user.login }
         sync
         `git checkout -b issue-#{id}`
       end
@@ -86,11 +84,11 @@ module Gub
       if id.nil?
         puts "Unable to guess issue ID from branch name. You might want to specify it explicitly."
       else
-        issue = @client.issue(repo, id)
+        issue = Gub.github.issue(repo, id)
         puts 'Pushing branch...'
         `git push -q origin issue-#{id}`
         puts "Creating pull-request for issue ##{id}..."
-        @client.create_pull_request_for_issue(repo, 'master', "#{user_name}:issue-#{id}", id)
+        Gub.github.create_pull_request_for_issue(repo, 'master', "#{user_name}:issue-#{id}", id)
         `git checkout master`
       end
     end
@@ -110,9 +108,9 @@ module Gub
     
     desc 'info', 'Show current respository information'
     def info
-      # debugger
-      puts "Github repository: #{repo_full_name}"
-      puts "Forked from: #{parent}" if parent
+      repo = Gub::Repository.new
+      puts "Github repository: #{repo.full_name}"
+      puts "Forked from: #{repo.parent}" if repo.parent
     end
     
     desc 'version', 'Show Gub version'
@@ -123,15 +121,6 @@ module Gub
     
     private
       def setup
-        # TODO: Check if the RC file exists
-        rc = File.expand_path("~/.gubrc")
-        if File.exists?(rc)
-          config = YAML.load_file(rc)
-          @client = Octokit::Client.new access_token: config['token']
-        else
-          puts 'Unable to find .gubrc file.'
-          exit 1
-        end
       end
     
       def table rows, header = []
@@ -157,10 +146,6 @@ module Gub
       end
       def user_name
         repo_full_name.split('/').first
-      end
-      def parent
-        setup
-        @client.repo(repo: repo_full_name).parent.full_name if @client.repo(repo: repo_full_name).parent
       end
     
   end  

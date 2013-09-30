@@ -1,5 +1,4 @@
 module Gub
-  class Client
-    
+  class Git
   end
 end
