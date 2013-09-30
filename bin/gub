@@ -1,9 +1,11 @@
 #!/usr/bin/env ruby
 
-$:<< File.expand_path("~/Projects/gub/lib/")
+debug = false
+if ENV.include?('GUB_ENV') && ENV['GUB_ENV'] == 'development'
+  debug = true
+  $:<< File.expand_path("~/Projects/gub/lib/")
+end
 
-require 'rubygems'
 require 'gub'
-
 # Start our command line interface
-Gub.start
+Gub.start(debug)

@@ -1,19 +1,20 @@
 require 'gub/version'
 require 'thor'
 require 'terminal-table'
+require 'highline'
 
 module Gub
   class CLI < Thor
-    default_task :info
+    include Thor::Actions
+    
+    default_task :version
     
     desc 'publish', 'Publish a local repo to Github'
     def publish
-      setup
     end
   
     desc 'repos', 'List Github repositories'
     def repos
-      setup
       rows = []
       id = 0
       Gub.github.repos.list.each do |repo|
@@ -26,25 +27,43 @@ module Gub
           rows << [id, repo.full_name]
         end
       end
-      puts table rows, ['#', 'Repository']
+      say table rows, ['#', 'Repository']
     end
   
+    desc 'issue [id]', 'Show a Github issue'
+    def issue(id)
+      repository = Gub::Repository.new
+      issue = repository.issue(id)
+      rows = []
+      rows << ['Status:', issue.state]
+      rows << ['Milestone:', issue.milestone.title]
+      rows << ['Author:', issue.user.login]
+      rows << ['Assignee:', (issue.assignee.nil? ? '-' : issue.assignee.login)]
+      rows << ['Description:', word_wrap(issue.body, line_width: 70)]
+      Gub.log.info "Hint: use 'gub start #{id}' to start working on this issue."
+      say table rows, ["Issue ##{id}:", issue.title]
+    end
+    
     desc 'issues', 'List Github issues'
-    method_options all: :boolean, default: false
+    method_option :all, type: :boolean, aliases: '-a', desc: 'Issues in all repositories'
+    method_option :mine, type: :boolean, aliases: '-m', desc: 'Only issues assigned to me'
     def issues
-      setup
-      if options.all || repo_full_name.nil?
-        puts "Listing all issues:"
-        issues = Gub.github.issues
+      args = {}
+      repository = Gub::Repository.new
+      if options.mine
+        args[:assignee] = Gub.github.user.login
+      end
+      if options.all || repository.full_name.nil?
+        Gub.log.info "Listing issues assigned to you:"
+        issues = Gub.github.user_issues
       else
-        params = {}
-        if parent
-          params[:repo] = parent
+        if repository.has_issues?
+          Gub.log.info "Listing issues for #{repository.full_name}:"
         else
-          params[:repo] = repo_full_name
+          Gub.log.info "Issues disabled #{repository.full_name}."
+          Gub.log.info "Listing issues for #{repository.parent}:"
         end
-        puts "Listing issues for #{params[:repo]}:"
-        issues = Gub.github.issues params
+        issues = repository.issues(args)
       end
       unless issues.nil?
         rows = []
@@ -54,99 +73,109 @@ module Gub
           row << issue.title
           row << issue.user.login
           row << (issue.assignee.nil? ? '' : issue.assignee.login)
+          row << issue.status
           rows << row
         end
-        puts table rows, ['ID', 'Title', 'Author', 'Assignee']
-        puts "Found #{issues.count} issue(s)."
-        puts 'Hint: use "gub start" to start working on an issue.'
+        say table rows, ['ID', 'Title', 'Author', 'Assignee', 'Status']
+        Gub.log.info "Found #{issues.count} issue(s)."
+        Gub.log.info 'Hint: use "gub start" to start working on an issue.'
       end
-    # rescue Octokit::ClientError
-    #   puts 'Issues are disabled for this repository.'
     end
     
-    desc 'start', 'Start working on a Github issue'
+    desc 'start [id]', 'Start working on a Github issue'
     def start id
       if id.nil?
-        puts 'Issue ID required.'
+        Gub.log.fatal 'Issue ID required.'
+        exit 1
       else
-        # Fetch issue to validate it exists
-        issue = Gub.github.issue(repo, id)
-        Gub.github.update_issue repo, issue.number, issue.title, issue.description, { assignee: Gub.github.user.login }
-        sync
-        `git checkout -b issue-#{id}`
+        repository = Repository.new
+        Gub.git.sync
+        repository.assign_issue id
+        Gub.git.checkout('-b', "issue-#{id}")
       end
     end
     
-    desc 'finish', 'Finish working on a Github issue'
+    desc 'finish [id]', 'Finish working on a Github issue'
     def finish id = nil
-      setup
       id ||= `git rev-parse --abbrev-ref HEAD`.split('-').last.to_s.chop
       if id.nil?
-        puts "Unable to guess issue ID from branch name. You might want to specify it explicitly."
+        Gub.log.fatal "Unable to guess issue ID from branch name. You might want to specify it explicitly."
+        exit 1
       else
         issue = Gub.github.issue(repo, id)
-        puts 'Pushing branch...'
-        `git push -q origin issue-#{id}`
-        puts "Creating pull-request for issue ##{id}..."
+        Gub.log.info 'Pushing branch...'
+        Gub.git.push('origin', "issue-#{id}")
+        Gub.log.info "Creating pull-request for issue ##{id}..."
         Gub.github.create_pull_request_for_issue(repo, 'master', "#{user_name}:issue-#{id}", id)
-        `git checkout master`
+        Gub.git.checkout('master')
       end
     end
     
-    desc 'clone', 'Clone a Github repository'
+    desc 'clone [repo]', 'Clone a Github repository'
+    method_option :https, type: :boolean, desc: 'Use HTTPs instead of the default SSH'
     def clone repo
-      `git clone git@github.com:#{repo}`
+      if options.https
+        url = "https://github.com/#{repo}"
+      else
+        url = "git@github.com:#{repo}"
+      end
+      Gub.log.info "Cloning from #{url}..."
+      Gub.git.clone(url)
+      `cd #{repo.split('/').last}`
+      repository = Repository.new
+      repository.add_upstream
+    end
+    
+    desc 'add_upstream', 'Add repo upstream'
+    def add_upstream
+      repository = Repository.new
+      repository.add_upstream
     end
     
     desc 'sync', 'Synchronize fork with upstream repository'
     def sync
-      puts 'Synchroizing with upstream...'
-      `git checkout master`
-      `git fetch -q upstream`
-      `git merge -q upstream/master`
+      Gub.log.info 'Synchroizing with upstream...'
+      Gub.git.sync
     end
     
     desc 'info', 'Show current respository information'
     def info
       repo = Gub::Repository.new
-      puts "Github repository: #{repo.full_name}"
-      puts "Forked from: #{repo.parent}" if repo.parent
+      say "Github repository: #{repo.full_name}"
+      say "Forked from: #{repo.parent}" if repo.parent
+    end
+    
+    desc 'setup', 'Setup Gub for the first time'
+    def setup
+      unless Gub.config.data && Gub.config.data.has_key?('token')
+        hl = HighLine.new
+        username = hl.ask 'Github username: '
+        password = hl.ask('Github password (we will not store this): ') { |q| q.echo = "*" }
+        gh = Gub::Github.new(login: username, password: password)
+        token = gh.create_authorization(scopes: [:user, :repo, :gist], note: 'Gub').token
+        Gub.config.add('token', token)
+      end
     end
     
     desc 'version', 'Show Gub version'
     def version
-      puts Gub::VERSION
+      say Gub::VERSION
     end
     
     
     private
-      def setup
+    def table rows, header = []
+      Terminal::Table.new :headings => header, :rows => rows
+    end
+      
+    # Source: https://github.com/rails/rails/actionpack/lib/action_view/helpers/text_helper.rb
+    def word_wrap(text, options = {})
+      line_width = options.fetch(:line_width, 80)
+      unless text.nil?
+        text.split("\n").collect do |line|
+          line.length > line_width ? line.gsub(/(.{1,#{line_width}})(\s+|$)/, "\\1\n").strip : line
+        end * "\n"
       end
-    
-      def table rows, header = []
-        Terminal::Table.new :headings => header, :rows => rows
-      end
-    
-      def run command, params = {}
-      end
-    
-      def repo
-        if parent
-          name = parent
-        else
-          name = repo_full_name
-        end
-        name
-      end
-      def repo_full_name
-        `git remote -v | grep origin | grep fetch | awk '{print $2}' | cut -d ':' -f 2`.to_s.chop
-      end
-      def repo_name
-        repo_full_name.split('/').last
-      end
-      def user_name
-        repo_full_name.split('/').first
-      end
-    
+    end  
   end  
 end
