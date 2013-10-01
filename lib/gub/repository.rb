@@ -51,6 +51,16 @@ module Gub
       Gub.github.update_issue name, issue.number, issue.title, issue.body, { assignee: assignee }
     end
     
+    def issue_pull_request id
+      issue = self.issue(id)
+      if self.has_issues?
+        repo = self.full_name
+      else
+        repo = self.parent
+      end
+      Gub.github.create_pull_request_for_issue(repo, 'master', "#{self.owner}:issue-#{id}", id)
+    end
+    
     def owner
       @full_name.split('/').first
     end

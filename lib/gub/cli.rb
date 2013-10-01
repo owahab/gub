@@ -98,11 +98,11 @@ module Gub
         Gub.log.fatal "Unable to guess issue ID from branch name. You might want to specify it explicitly."
         exit 1
       else
-        issue = Gub.github.issue(repo, id)
+        repository = Repository.new
         Gub.log.info 'Pushing branch...'
         Gub.git.push('origin', "issue-#{id}")
         Gub.log.info "Creating pull-request for issue ##{id}..."
-        Gub.github.create_pull_request_for_issue(repo, 'master', "#{user_name}:issue-#{id}", id)
+        repository.issue_pull_request(id)
         Gub.git.checkout('master')
       end
     end
