@@ -1,4 +1,7 @@
 #!/usr/bin/env ruby
+
+debug = false
+
 require 'gub'
 # Start our command line interface
 Gub.start(debug)
