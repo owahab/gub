@@ -7,12 +7,8 @@ module Gub
   class CLI < Thor
     include Thor::Actions
     
-    default_task :version
+    default_task :help
     
-    desc 'publish', 'Publish a local repo to Github'
-    def publish
-    end
-  
     desc 'repos', 'List Github repositories'
     def repos
       rows = []

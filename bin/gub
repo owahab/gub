@@ -1,11 +1,4 @@
 #!/usr/bin/env ruby
-
-debug = false
-if ENV.include?('GUB_ENV') && ENV['GUB_ENV'] == 'development'
-  debug = true
-  $:<< File.expand_path("~/Projects/gub/lib/")
-end
-
 require 'gub'
 # Start our command line interface
 Gub.start(debug)
