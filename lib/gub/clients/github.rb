@@ -1,4 +1,5 @@
 require 'octokit'
+require 'gub/exceptions'
 
 module Gub
   class Github
@@ -14,6 +15,8 @@ module Gub
     
     def method_missing meth, *args, &block
       @connection.send(meth, *args, &block)
+      rescue Octokit::Unauthorized, Octokit::NotFound
+        raise Gub::Unauthorized
     end
   end
 end
