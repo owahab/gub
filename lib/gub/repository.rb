@@ -8,6 +8,8 @@ module Gub
       else
         self.full_name = full_name
       end
+      # Strip .git from the name
+      self.full_name = self.full_name.split('.').first
       if self.full_name.nil? || self.full_name.empty?
         Gub.log.fatal 'Unable to find repo name'
         exit 1
@@ -74,7 +76,7 @@ module Gub
     end
     
     def parent
-      self.info.parent.full_name if self.info.parent
+      self.info.parent.full_name.split('.').first if self.info.parent
     end
     
     def sync
