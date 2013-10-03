@@ -13,17 +13,20 @@ module Gub
     def repos
       rows = []
       id = 0
-      Gub.github.repos.list.each do |repo|
-        id = id.next
-        rows << [id, repo.full_name]
-      end
-      Gub.github.orgs.list.each do |org|
-        Gub.github.repos.list(org: org.login).each do |repo|
+      table = Terminal::Table.new(headings: ['#', 'Repository']) do |t|
+        Gub.github.repos.each do |repo|
           id = id.next
-          rows << [id, repo.full_name]
+          t.add_row [id, repo.full_name]
+        end
+        Gub.github.orgs.each do |org|
+          t.add_separator
+          Gub.github.organization_repositories(org.login).each do |repo|
+            id = id.next
+            t.add_row [id, repo.full_name]
+          end
         end
       end
-      say table rows, ['#', 'Repository']
+      puts table
     end
   
     desc 'issue [id]', 'Show a Github issue'
@@ -161,7 +164,7 @@ module Gub
     
     private
     def table rows, header = []
-      Terminal::Table.new :headings => header, :rows => rows
+      Terminal::Table.new headings: header, rows: rows
     end
       
     # Source: https://github.com/rails/rails/actionpack/lib/action_view/helpers/text_helper.rb
