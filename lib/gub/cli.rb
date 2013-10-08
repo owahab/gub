@@ -78,7 +78,7 @@ module Gub
           row << issue.title
           row << issue.user.login
           row << (issue.assignee.nil? ? '' : issue.assignee.login)
-          row << issue.status
+          row << issue.state
           rows << row
         end
         say table rows, ['ID', 'Title', 'Author', 'Assignee', 'Status']
