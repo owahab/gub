@@ -1,3 +1,5 @@
+require 'open3'
+
 module Gub
   class Git
     attr_accessor :default_options
@@ -30,14 +32,17 @@ module Gub
       cmd = []
       cmd << 'git'
       cmd << command
-      arguments = args
-      unless ['clone', 'remote', 'checkout'].include?(command)
-        arguments = arguments.zip(default_options).flatten!
+      if args.any?
+        arguments = args
+        unless ['clone', 'remote', 'checkout'].include?(command)
+          arguments = arguments.zip(default_options).flatten!
+        end
+        cmd << arguments.join(' ').to_s
       end
-      cmd << arguments.join(' ').to_s
       cmd_line = cmd.join(' ')
       Gub.log.debug "Running git command: #{cmd_line}"
-      `#{cmd_line}`
+      out = `#{cmd_line}`.split("\n").map(&:strip)
+      out
     end
   end
 end

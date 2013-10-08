@@ -94,10 +94,15 @@ module Gub
       if id.nil?
         panic 'Issue ID required.'
       else
-        repository = Repository.new
-        Gub.git.sync
-        repository.assign_issue id
-        Gub.git.checkout('-b', "issue-#{id}")
+        branch = "issue-#{id}"
+        if Gub.git.branch().include?('issue-111')
+          Gub.git.checkout(branch)
+        else
+          repository = Repository.new
+          Gub.git.sync
+          repository.assign_issue id
+          Gub.git.checkout('-b', branch)
+        end
       end
     rescue Gub::Unauthorized
       reauthorize
