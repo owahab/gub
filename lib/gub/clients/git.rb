@@ -4,10 +4,10 @@ module Gub
   class Git
     attr_accessor :default_options
     
-    def sync
+    def sync remote
       self.checkout('master')
-      self.fetch('upstream')
-      self.merge('upstream/master')
+      self.fetch(remote)
+      self.merge("#{remote}/master")
       self.push('origin', '--all')
     end
     
